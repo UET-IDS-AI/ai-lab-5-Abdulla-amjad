@@ -37,16 +37,59 @@ def lasso_regression_diabetes(lambda_reg=0.1, lr=0.01, epochs=2000):
     Implement Lasso regression using gradient descent.
     """
 
-    # TODO: Load diabetes dataset
-    # TODO: Train/test split
-    # TODO: Standardize features
-    # TODO: Add bias column
-    # TODO: Initialize theta
-    # TODO: Implement gradient descent with L1 regularization
-    # TODO: Compute predictions
-    # TODO: Compute metrics
+    # Load dataset
+    data = load_diabetes()
+    X = data.data
+    y = data.target
 
-    raise NotImplementedError
+    # Train test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Standardize features
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    # Add bias column
+    X_train = add_bias(X_train)
+    X_test = add_bias(X_test)
+
+    # Initialize theta
+    n_features = X_train.shape[1]
+    theta = np.zeros(n_features)
+
+    m = len(y_train)
+
+    # Gradient Descent with L1 regularization
+    for _ in range(epochs):
+
+        predictions = X_train @ theta
+        errors = predictions - y_train
+
+        gradient = (1 / m) * (X_train.T @ errors)
+
+        # L1 regularization term (do not regularize bias)
+        reg = lambda_reg * np.sign(theta)
+        reg[0] = 0
+
+        theta -= lr * (gradient + reg)
+
+    # Predictions
+    train_pred = X_train @ theta
+    test_pred = X_test @ theta
+
+    # Metrics
+    results = {
+        "train_mse": mse(y_train, train_pred),
+        "test_mse": mse(y_test, test_pred),
+        "train_r2": r2_score(y_train, train_pred),
+        "test_r2": r2_score(y_test, test_pred),
+        "theta": theta
+    }
+
+    return results
 
 
 # =========================
@@ -58,17 +101,44 @@ def polynomial_overfitting_experiment(max_degree=10):
     Study overfitting using polynomial regression.
     """
 
-    # TODO: Load dataset
-    # TODO: Select BMI feature only
-    # TODO: Train/test split
+    # Load dataset
+    data = load_diabetes()
+    X = data.data[:, 2].reshape(-1, 1)   # BMI feature only
+    y = data.target
+
+    # Train test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
     degrees = []
     train_errors = []
     test_errors = []
 
-    # TODO: Loop through polynomial degrees
-    # TODO: Create polynomial features
-    # TODO: Fit regression using normal equation
-    # TODO: Compute train/test errors
+    # Loop through polynomial degrees
+    for degree in range(1, max_degree + 1):
 
-    raise NotImplementedError
+        poly = PolynomialFeatures(degree)
+        X_train_poly = poly.fit_transform(X_train)
+        X_test_poly = poly.transform(X_test)
+
+        # Normal equation
+        theta = np.linalg.pinv(X_train_poly.T @ X_train_poly) @ X_train_poly.T @ y_train
+
+        # Predictions
+        train_pred = X_train_poly @ theta
+        test_pred = X_test_poly @ theta
+
+        # Errors
+        train_error = mse(y_train, train_pred)
+        test_error = mse(y_test, test_pred)
+
+        degrees.append(degree)
+        train_errors.append(train_error)
+        test_errors.append(test_error)
+
+    return {
+        "degrees": degrees,
+        "train_errors": train_errors,
+        "test_errors": test_errors
+    }
